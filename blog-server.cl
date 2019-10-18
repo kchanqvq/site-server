@@ -1,5 +1,6 @@
 (load "~/quicklisp/setup.lisp")
 (ql:quickload "aserve")
+(ql:quickload "cl-ppcre")
 (defpackage :blog-server (:use :cl :net.aserve :net.html.generator))
 (in-package :blog-server)
 (start :port 80)
@@ -82,7 +83,11 @@
                            (unless (or empty-uri empty-text)
                              (html :br))
                            (unless empty-text
-                             (html (:princ-safe text)))))
+                             (html (:princ-safe
+                                    (cl-ppcre:regex-replace-all
+                                     (format nil "~%")
+                                     text
+                                     "<br/>"))))))
              (get-output-stream-string content-stream))))
     (if (or empty-name (and empty-text empty-uri))
         (failed-request req)
