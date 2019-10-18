@@ -4,8 +4,9 @@
 (in-package :blog-server)
 (start :port 80)
 (defvar *comment-table* (make-hash-table :test 'equal))
-(defvar *document-root* "/Users/hongqiantan/blog/")
 (defvar *next-comment-id-table* (make-hash-table :test 'equal))
+
+(defvar *document-root* "/Users/hongqiantan/blog/")
 (defun touch-comment-table (filename)
   (multiple-value-bind (comment-table table-exist)
       (gethash filename *comment-table*)
@@ -28,7 +29,7 @@
                              (parse-integer line :junk-allowed t
                                                  :start (1+ parent-field-end))
                            (setf (gethash filename *next-comment-id-table*)
-                                 (max (gethash filename *next-comment-id-table*) num-id))
+                                 (max (gethash filename *next-comment-id-table*) (1+ num-id)))
                            (comment-table-insert
                             comment-table
                             num-id
@@ -56,6 +57,7 @@
                      result
                      (failed-request req)))))
          (empty-uri (string-equal uri ""))
+         (empty-name (string-equal nickname ""))
          (empty-text (string-equal text ""))
          (empty-contact (string-equal contact ""))
          (content-string
@@ -82,18 +84,21 @@
                            (unless empty-text
                              (html (:princ-safe text)))))
              (get-output-stream-string content-stream))))
-    (comment-table-insert
-     (gethash filename *comment-table*)
-     (gethash filename *next-comment-id-table*)
-     num-parent
-     content-string)
-    (with-open-file (comment-file-stream
-                     (concatenate 'string filename ".comments")
-                     :direction :output :if-exists :append :if-does-not-exist :create)
-      (format comment-file-stream "~D ~D " num-parent (gethash filename *next-comment-id-table*))
-      (write-line content-string comment-file-stream))
-    (setf (gethash filename *next-comment-id-table*)
-          (1+ (gethash filename *next-comment-id-table*)))))
+    (if (or empty-name (and empty-text empty-uri))
+        (failed-request req)
+        (progn
+          (comment-table-insert
+           (gethash filename *comment-table*)
+           (gethash filename *next-comment-id-table*)
+           num-parent
+           content-string)
+          (with-open-file (comment-file-stream
+                           (concatenate 'string filename ".comments")
+                           :direction :output :if-exists :append :if-does-not-exist :create)
+            (format comment-file-stream "~D ~D " num-parent (gethash filename *next-comment-id-table*))
+            (write-line content-string comment-file-stream))
+          (setf (gethash filename *next-comment-id-table*)
+                (1+ (gethash filename *next-comment-id-table*)))))))
 (defun format-comment-list (comment-table content child-list)
   (html ((:div class "comment") (:princ content)
               (mapc (lambda (child)
