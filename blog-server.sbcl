@@ -2,7 +2,7 @@
 (ql:quickload "aserve")
 (defpackage :blog-server (:use :cl :net.aserve :net.html.generator))
 (in-package :blog-server)
-(start :port 8000)
+(start :port 80)
 (defvar *comment-table* (make-hash-table :test 'equal))
 (defvar *document-root* "/Users/hongqiantan/blog/")
 (defvar *next-comment-id-table* (make-hash-table :test 'equal))
@@ -12,7 +12,6 @@
     (unless table-exist
       (let ((comment-file-name
               (concatenate 'string filename ".comments")))
-        (print "bad")
         (setf (gethash filename *comment-table*) (make-hash-table))
         (setf (gethash filename *next-comment-id-table*) 1)
         (setf comment-table (gethash filename *comment-table*))
